@@ -366,6 +366,7 @@ fn check_indent(lexer: &mut Lexer<'_, Token>) -> Result<Token, LexerError> {
         Ok(Token::Whitespace)
     }
 }
+
 fn check_first_line_indent(lexer: &mut Lexer<'_, Token>) -> Result<Token, LexerError> {
     if lexer.span().start == 0 {
         lexer.extras.pending_indent += 1;
@@ -413,6 +414,7 @@ impl Default for Context {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(u8)]
 enum FormatSpecState {
     Start,        // Beginning of format spec
     Fill,         // Fill character seen
@@ -455,6 +457,7 @@ fn parse_colon(lexer: &mut Lexer<'_, Token>) -> Result<Token, LexerError> {
     let len = bytes.len();
     let mut state = FormatSpecState::Start;
 
+    // Handle fill+align or align-only at start
     if len >= 2 {
         let first = bytes[0];
         let second = bytes[1];
@@ -465,6 +468,13 @@ fn parse_colon(lexer: &mut Lexer<'_, Token>) -> Result<Token, LexerError> {
         }
     }
 
+    // Handle align-only case
+    if pos == 0 && len >= 1 && is_align(bytes[0]) {
+        pos = 1;
+        lexer.bump(1);
+        state = FormatSpecState::Align;
+    }
+
     while pos < len {
         let b = bytes[pos];
 
@@ -473,6 +483,12 @@ fn parse_colon(lexer: &mut Lexer<'_, Token>) -> Result<Token, LexerError> {
                 if state == FormatSpecState::PrecisionDot {
                     return Err(LexerError::InvalidFormatSpec);
                 }
+                // lexer.bump(1);
+
+                // if let Ok(Token::FormatSpecifier) = parse_colon(lexer) {
+                //     return Err(LexerError::InvalidFormatSpec);
+                // }
+
                 return Ok(Token::FormatSpecifier);
             }
 
@@ -824,6 +840,8 @@ pub enum Token {
     String,
 
     // exclusively for python3
+    #[token("_", priority = 10)]
+    Wildcard,
     #[token("async")]
     Async,
     #[token("await")]
@@ -831,6 +849,10 @@ pub enum Token {
     #[regex("![ars]")]
     ConversionSpecifier,
     FormatSpecifier,
+    #[token("match")]
+    Match,
+    #[token("case")]
+    Case,
     #[regex("(?&fstringprefix)\"", |lexer| {
         lexer.extras.strings_stack.push(StringKind::ShortDouble);
         parse_short_double_fstring(lexer)

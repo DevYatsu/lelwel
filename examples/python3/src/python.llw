@@ -18,7 +18,7 @@ token As='as' If='if' In='in' Is='is' Or='or' AndKw='and' Def='def'
       Yield='yield';
 
 // Python3 tokens
-token Async='async' Await='await' Match='match';
+token Async='async' Await='await' Match='match' Case='case' Wildcard='_';
 token FString ConversionSpecifier FormatSpecifier;
 
 token Newline Name Dedent Indent Int Float Imaginary String;
@@ -30,18 +30,20 @@ right '**';
 start file_input;
 file_input: (Newline | stmt)*;
 
+name: Name^ | Wildcard^;
+
 decorator: '@' dotted_name [ '(' [arglist] ')' ] Newline;
 decorators: decorator+;
 decorated: decorators (classdef | funcdef);
 // async functions are handled in 2 different ways, once with decorators and once without, i see no better solution
-funcdef: ['async'] 'def' Name parameters ':' suite;
+funcdef: ['async'] 'def' name parameters ':' suite;
 parameters: '(' [varargslist] ')';
 varargslist:
-  fpdef ['=' test] (?1 ',' fpdef ['=' test])* [',' ['*' Name [',' '**' Name] | '**' Name]]
-| '*' Name [',' '**' Name]
-| '**' Name
+  fpdef ['=' test] (?1 ',' fpdef ['=' test])* [',' ['*' name [',' '**' name] | '**' name]]
+| '*' name [',' '**' name]
+| '**' name
 ;
-fpdef: Name | '(' fplist ')';
+fpdef: name | '(' fplist ')';
 fplist: fpdef (?1 ',' fpdef)* [','];
 
 stmt^: simple_stmts | compound_stmt;
@@ -86,12 +88,12 @@ import_from:
   'from' ('.'+ [dotted_name] | dotted_name)
   'import' ('*' | '(' import_as_names ')' | import_as_names)
 ;
-import_as_name: Name ['as' Name];
-dotted_as_name: dotted_name ['as' Name];
+import_as_name: name ['as' name];
+dotted_as_name: dotted_name ['as' name];
 import_as_names: import_as_name (?1 ',' import_as_name)* [','];
 dotted_as_names: dotted_as_name (',' dotted_as_name)*;
-dotted_name: Name ('.' Name)*;
-global_stmt: 'global' Name (',' Name)*;
+dotted_name: name ('.' name)*;
+global_stmt: 'global' name (',' name)*;
 exec_stmt: 'exec' expr ['in' test [',' test]];
 assert_stmt: 'assert' test [',' test];
 
@@ -100,6 +102,7 @@ compound_stmt^:
 | while_stmt
 | for_stmt
 | try_stmt
+| match_stmt
 | with_stmt
 | classdef
 | async_stmt
@@ -119,9 +122,17 @@ with_stmt: 'with' with_item (',' with_item)*  ':' suite;
 with_item: test ['as' expr];
 except_clause: 'except' [test [('as' | ',') test]];
 suite: simple_stmts | Newline Indent stmt+ Dedent;
-match_stmt: 'match';
-// subject_expr: star_named_expression ',' [star_named_expressions]
-//   | named_expression;
+
+match_stmt: 'match' expr ':' Newline Indent case_block+ Dedent;
+case_block: 'case' patterns [guard] ':' suite;
+guard: 'if' test;
+patterns: pattern;
+pattern: closed_pattern ('|' or_pattern)* ['as' name];
+or_pattern: '|' closed_pattern+;
+closed_pattern: String | Int | Float | Imaginary | Wildcard
+    | '(' [patterns] ')'
+    | '[' [patterns] ']'
+    | '{' [dictorsetmaker] '}';
 
 testlist_safe: old_test [(?1 ',' old_test)+ [',']];
 old_test: or_test | old_lambdef;
@@ -141,7 +152,7 @@ expr:
   expr '**' expr @binary_expr
 | expr '(' [arglist] ')' @call_expr
 | expr '[' subscriptlist ']' @subscript_expr
-| expr '.' Name @field_expr
+| expr '.' name @field_expr
 | ('+'|'-'|'~') expr @unary_expr
 | expr ('*' | '/' | '%' | '//') expr @binary_expr
 | expr ('+' | '-') expr @binary_expr
@@ -153,7 +164,7 @@ expr:
 | '[' [listmaker] ']' @list_expr
 | '{' [dictorsetmaker] '}' @dict_expr
 | '`' testlist1 '`' @repr_expr
-| Name @name_expr
+| name @name_expr
 | Int @int_expr
 | Float @float_expr
 | Imaginary @imaginary_expr
@@ -192,7 +203,7 @@ dictorsetmaker:
   | (comp_for | (?1 ',' test)* [','])
   )
 ;
-classdef: 'class' Name ['(' [testlist] ')'] ':' suite;
+classdef: 'class' name ['(' [testlist] ')'] ':' suite;
 
 arglist:
   argument (?1 ',' argument)* [

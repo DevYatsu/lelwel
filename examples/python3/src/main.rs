@@ -21,14 +21,14 @@ fn main() -> std::io::Result<()> {
         // ISO 8859-1
         buf.iter().map(|&c| c as char).collect()
     }
-    .repeat(10000);
-
+    // .repeat(10000);
+;
     let start = std::time::Instant::now();
     let mut diags = vec![];
     let cst = Parser::parse(&source, &mut diags);
     let end = std::time::Instant::now();
 
-    // println!("{cst}");
+    println!("{cst}");
     println!(
         "Parsing {} chars took {} ms",
         source.chars().count(),

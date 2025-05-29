@@ -1,0 +1,37 @@
+Module
+  Assign
+    targets:
+      Name 'x'
+    value:
+      FString
+        values:
+          Constant '{{'
+          FString
+            values:
+              Name 'x'
+              FormatSpec '}>5'
+          Constant '}'
+  Assign
+    targets:
+      Name 'y'
+    value:
+      FString
+        values:
+          Name 'x'
+          FormatSpec '>5'
+  Assign
+    targets:
+      Name 'z'
+    value:
+      FString
+        values:
+          Constant '123'
+          FormatSpec '^10'
+  Assign
+    targets:
+      Name 'w'
+    value:
+      FString
+        values:
+          Name 'x'
+          FormatSpec '.2f' 

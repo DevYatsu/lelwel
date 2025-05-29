@@ -52,7 +52,9 @@ pub enum Rule {
     BoolExpr,
     BreakStmt,
     CallExpr,
+    CaseBlock,
     Classdef,
+    ClosedPattern,
     CompFor,
     CompIf,
     CompIter,
@@ -86,6 +88,7 @@ pub enum Rule {
     FstringExpr,
     Funcdef,
     GlobalStmt,
+    Guard,
     IfExpr,
     IfStmt,
     ImaginaryExpr,
@@ -105,9 +108,12 @@ pub enum Rule {
     NameExpr,
     OldLambdef,
     OldTest,
+    OrPattern,
     OrTest,
     Parameters,
     PassStmt,
+    Pattern,
+    Patterns,
     PrintStmt,
     RaiseStmt,
     ReprExpr,
@@ -117,6 +123,7 @@ pub enum Rule {
     SmallStmt,
     Stmt,
     StringExpr,
+    SubjectExpr,
     Subscript,
     SubscriptExpr,
     Subscriptlist,
@@ -433,7 +440,9 @@ impl std::fmt::Debug for Rule {
     Rule::BoolExpr => write!(f, "bool_expr"),
     Rule::BreakStmt => write!(f, "break_stmt"),
     Rule::CallExpr => write!(f, "call_expr"),
+    Rule::CaseBlock => write!(f, "case_block"),
     Rule::Classdef => write!(f, "classdef"),
+    Rule::ClosedPattern => write!(f, "closed_pattern"),
     Rule::CompFor => write!(f, "comp_for"),
     Rule::CompIf => write!(f, "comp_if"),
     Rule::CompIter => write!(f, "comp_iter"),
@@ -467,6 +476,7 @@ impl std::fmt::Debug for Rule {
     Rule::FstringExpr => write!(f, "fstring_expr"),
     Rule::Funcdef => write!(f, "funcdef"),
     Rule::GlobalStmt => write!(f, "global_stmt"),
+    Rule::Guard => write!(f, "guard"),
     Rule::IfExpr => write!(f, "if_expr"),
     Rule::IfStmt => write!(f, "if_stmt"),
     Rule::ImaginaryExpr => write!(f, "imaginary_expr"),
@@ -486,9 +496,12 @@ impl std::fmt::Debug for Rule {
     Rule::NameExpr => write!(f, "name_expr"),
     Rule::OldLambdef => write!(f, "old_lambdef"),
     Rule::OldTest => write!(f, "old_test"),
+    Rule::OrPattern => write!(f, "or_pattern"),
     Rule::OrTest => write!(f, "or_test"),
     Rule::Parameters => write!(f, "parameters"),
     Rule::PassStmt => write!(f, "pass_stmt"),
+    Rule::Pattern => write!(f, "pattern"),
+    Rule::Patterns => write!(f, "patterns"),
     Rule::PrintStmt => write!(f, "print_stmt"),
     Rule::RaiseStmt => write!(f, "raise_stmt"),
     Rule::ReprExpr => write!(f, "repr_expr"),
@@ -498,6 +511,7 @@ impl std::fmt::Debug for Rule {
     Rule::SmallStmt => write!(f, "small_stmt"),
     Rule::Stmt => write!(f, "stmt"),
     Rule::StringExpr => write!(f, "string_expr"),
+    Rule::SubjectExpr => write!(f, "subject_expr"),
     Rule::Subscript => write!(f, "subscript"),
     Rule::SubscriptExpr => write!(f, "subscript_expr"),
     Rule::Subscriptlist => write!(f, "subscriptlist"),
@@ -679,7 +693,9 @@ impl<'a> Parser<'a> {
             Rule::BoolExpr => self.create_node_bool_expr(node_ref, diags),
             Rule::BreakStmt => self.create_node_break_stmt(node_ref, diags),
             Rule::CallExpr => self.create_node_call_expr(node_ref, diags),
+            Rule::CaseBlock => self.create_node_case_block(node_ref, diags),
             Rule::Classdef => self.create_node_classdef(node_ref, diags),
+            Rule::ClosedPattern => self.create_node_closed_pattern(node_ref, diags),
             Rule::CompFor => self.create_node_comp_for(node_ref, diags),
             Rule::CompIf => self.create_node_comp_if(node_ref, diags),
             Rule::CompIter => self.create_node_comp_iter(node_ref, diags),
@@ -713,6 +729,7 @@ impl<'a> Parser<'a> {
             Rule::FstringExpr => self.create_node_fstring_expr(node_ref, diags),
             Rule::Funcdef => self.create_node_funcdef(node_ref, diags),
             Rule::GlobalStmt => self.create_node_global_stmt(node_ref, diags),
+            Rule::Guard => self.create_node_guard(node_ref, diags),
             Rule::IfExpr => self.create_node_if_expr(node_ref, diags),
             Rule::IfStmt => self.create_node_if_stmt(node_ref, diags),
             Rule::ImaginaryExpr => self.create_node_imaginary_expr(node_ref, diags),
@@ -732,9 +749,12 @@ impl<'a> Parser<'a> {
             Rule::NameExpr => self.create_node_name_expr(node_ref, diags),
             Rule::OldLambdef => self.create_node_old_lambdef(node_ref, diags),
             Rule::OldTest => self.create_node_old_test(node_ref, diags),
+            Rule::OrPattern => self.create_node_or_pattern(node_ref, diags),
             Rule::OrTest => self.create_node_or_test(node_ref, diags),
             Rule::Parameters => self.create_node_parameters(node_ref, diags),
             Rule::PassStmt => self.create_node_pass_stmt(node_ref, diags),
+            Rule::Pattern => self.create_node_pattern(node_ref, diags),
+            Rule::Patterns => self.create_node_patterns(node_ref, diags),
             Rule::PrintStmt => self.create_node_print_stmt(node_ref, diags),
             Rule::RaiseStmt => self.create_node_raise_stmt(node_ref, diags),
             Rule::ReprExpr => self.create_node_repr_expr(node_ref, diags),
@@ -744,6 +764,7 @@ impl<'a> Parser<'a> {
             Rule::SmallStmt => self.create_node_small_stmt(node_ref, diags),
             Rule::Stmt => self.create_node_stmt(node_ref, diags),
             Rule::StringExpr => self.create_node_string_expr(node_ref, diags),
+            Rule::SubjectExpr => self.create_node_subject_expr(node_ref, diags),
             Rule::Subscript => self.create_node_subscript(node_ref, diags),
             Rule::SubscriptExpr => self.create_node_subscript_expr(node_ref, diags),
             Rule::Subscriptlist => self.create_node_subscriptlist(node_ref, diags),
@@ -828,6 +849,7 @@ impl<'a> Parser<'a> {
                 | Token::LBrak
                 | Token::LPar
                 | Token::Lambda
+                | Token::Match
                 | Token::Minus
                 | Token::Name
                 | Token::Newline
@@ -870,6 +892,7 @@ impl<'a> Parser<'a> {
                         | Token::LBrak
                         | Token::LPar
                         | Token::Lambda
+                        | Token::Match
                         | Token::Minus
                         | Token::Name
                         | Token::Not
@@ -910,6 +933,7 @@ impl<'a> Parser<'a> {
                                         "[",
                                         "(",
                                         "lambda",
+                                        "match",
                                         "-",
                                         "Name",
                                         "Newline",
@@ -954,6 +978,7 @@ impl<'a> Parser<'a> {
                             "[",
                             "(",
                             "lambda",
+                            "match",
                             "-",
                             "Name",
                             "Newline",
@@ -1086,6 +1111,7 @@ impl<'a> Parser<'a> {
                 | Token::LBrak
                 | Token::LPar
                 | Token::Lambda
+                | Token::Match
                 | Token::Minus
                 | Token::Name
                 | Token::Newline
@@ -1249,6 +1275,7 @@ impl<'a> Parser<'a> {
                         | Token::LBrak
                         | Token::LPar
                         | Token::Lambda
+                        | Token::Match
                         | Token::Minus
                         | Token::Name
                         | Token::Newline
@@ -1416,6 +1443,7 @@ impl<'a> Parser<'a> {
                 | Token::LBrak
                 | Token::LPar
                 | Token::Lambda
+                | Token::Match
                 | Token::Minus
                 | Token::Name
                 | Token::Newline
@@ -1489,6 +1517,7 @@ impl<'a> Parser<'a> {
             | Token::Class
             | Token::For
             | Token::If
+            | Token::Match
             | Token::Try
             | Token::While
             | Token::With => {
@@ -1518,6 +1547,7 @@ impl<'a> Parser<'a> {
                             "[",
                             "(",
                             "lambda",
+                            "match",
                             "-",
                             "Name",
                             "not",
@@ -1552,6 +1582,7 @@ impl<'a> Parser<'a> {
                 | Token::Await
                 | Token::BTick
                 | Token::Break
+                | Token::Case
                 | Token::Class
                 | Token::Continue
                 | Token::Dedent
@@ -1575,6 +1606,7 @@ impl<'a> Parser<'a> {
                 | Token::LBrak
                 | Token::LPar
                 | Token::Lambda
+                | Token::Match
                 | Token::Minus
                 | Token::Name
                 | Token::Not
@@ -1813,6 +1845,7 @@ impl<'a> Parser<'a> {
                         | Token::Await
                         | Token::BTick
                         | Token::Break
+                        | Token::Case
                         | Token::Class
                         | Token::Continue
                         | Token::Dedent
@@ -1836,6 +1869,7 @@ impl<'a> Parser<'a> {
                         | Token::LBrak
                         | Token::LPar
                         | Token::Lambda
+                        | Token::Match
                         | Token::Minus
                         | Token::Name
                         | Token::Not
@@ -1990,6 +2024,7 @@ impl<'a> Parser<'a> {
                                 | Token::Await
                                 | Token::BTick
                                 | Token::Break
+                                | Token::Case
                                 | Token::Class
                                 | Token::Continue
                                 | Token::Dedent
@@ -2013,6 +2048,7 @@ impl<'a> Parser<'a> {
                                 | Token::LBrak
                                 | Token::LPar
                                 | Token::Lambda
+                                | Token::Match
                                 | Token::Minus
                                 | Token::Name
                                 | Token::Not
@@ -2093,6 +2129,7 @@ impl<'a> Parser<'a> {
                                 | Token::Await
                                 | Token::BTick
                                 | Token::Break
+                                | Token::Case
                                 | Token::Class
                                 | Token::Continue
                                 | Token::Dedent
@@ -2116,6 +2153,7 @@ impl<'a> Parser<'a> {
                                 | Token::LBrak
                                 | Token::LPar
                                 | Token::Lambda
+                                | Token::Match
                                 | Token::Minus
                                 | Token::Name
                                 | Token::Not
@@ -2416,6 +2454,7 @@ impl<'a> Parser<'a> {
                         | Token::Await
                         | Token::BTick
                         | Token::Break
+                        | Token::Case
                         | Token::Class
                         | Token::Continue
                         | Token::Dedent
@@ -2438,6 +2477,7 @@ impl<'a> Parser<'a> {
                         | Token::LBrak
                         | Token::LPar
                         | Token::Lambda
+                        | Token::Match
                         | Token::Minus
                         | Token::Newline
                         | Token::Not
@@ -2567,6 +2607,7 @@ impl<'a> Parser<'a> {
                 | Token::Await
                 | Token::BTick
                 | Token::Break
+                | Token::Case
                 | Token::Class
                 | Token::Continue
                 | Token::Dedent
@@ -2590,6 +2631,7 @@ impl<'a> Parser<'a> {
                 | Token::LBrak
                 | Token::LPar
                 | Token::Lambda
+                | Token::Match
                 | Token::Minus
                 | Token::Name
                 | Token::Not
@@ -2647,6 +2689,7 @@ impl<'a> Parser<'a> {
                 | Token::Await
                 | Token::BTick
                 | Token::Break
+                | Token::Case
                 | Token::Class
                 | Token::Continue
                 | Token::Dedent
@@ -2670,6 +2713,7 @@ impl<'a> Parser<'a> {
                 | Token::LBrak
                 | Token::LPar
                 | Token::Lambda
+                | Token::Match
                 | Token::Minus
                 | Token::Name
                 | Token::Not
@@ -2733,6 +2777,7 @@ impl<'a> Parser<'a> {
                 | Token::LBrace
                 | Token::LBrak
                 | Token::Lambda
+                | Token::Match
                 | Token::Minus
                 | Token::Name
                 | Token::Not
@@ -2780,6 +2825,7 @@ impl<'a> Parser<'a> {
                 | Token::Await
                 | Token::BTick
                 | Token::Break
+                | Token::Case
                 | Token::Class
                 | Token::Continue
                 | Token::Dedent
@@ -2803,6 +2849,7 @@ impl<'a> Parser<'a> {
                 | Token::LBrak
                 | Token::LPar
                 | Token::Lambda
+                | Token::Match
                 | Token::Minus
                 | Token::Name
                 | Token::Not
@@ -2897,6 +2944,9 @@ impl<'a> Parser<'a> {
             Token::Try => {
                 self.rule_try_stmt(diags);
             }
+            Token::Match => {
+                self.rule_match_stmt(diags);
+            }
             Token::With => {
                 self.rule_with_stmt(diags);
             }
@@ -2915,6 +2965,7 @@ impl<'a> Parser<'a> {
                             "class",
                             "for",
                             "if",
+                            "match",
                             "try",
                             "while",
                             "with"]);
@@ -2986,6 +3037,7 @@ impl<'a> Parser<'a> {
                 | Token::LBrak
                 | Token::LPar
                 | Token::Lambda
+                | Token::Match
                 | Token::Minus
                 | Token::Name
                 | Token::Newline
@@ -3029,6 +3081,7 @@ impl<'a> Parser<'a> {
                             "[",
                             "(",
                             "lambda",
+                            "match",
                             "-",
                             "Name",
                             "Newline",
@@ -3078,6 +3131,7 @@ impl<'a> Parser<'a> {
             | Token::LBrak
             | Token::LPar
             | Token::Lambda
+            | Token::Match
             | Token::Minus
             | Token::Name
             | Token::Newline
@@ -3120,6 +3174,7 @@ impl<'a> Parser<'a> {
                             "[",
                             "(",
                             "lambda",
+                            "match",
                             "-",
                             "Name",
                             "Newline",
@@ -3178,6 +3233,7 @@ impl<'a> Parser<'a> {
             | Token::LBrak
             | Token::LPar
             | Token::Lambda
+            | Token::Match
             | Token::Minus
             | Token::Name
             | Token::Newline
@@ -3220,6 +3276,7 @@ impl<'a> Parser<'a> {
                             "[",
                             "(",
                             "lambda",
+                            "match",
                             "-",
                             "Name",
                             "Newline",
@@ -3280,6 +3337,7 @@ impl<'a> Parser<'a> {
             | Token::LBrak
             | Token::LPar
             | Token::Lambda
+            | Token::Match
             | Token::Minus
             | Token::Name
             | Token::Newline
@@ -3322,6 +3380,7 @@ impl<'a> Parser<'a> {
                             "[",
                             "(",
                             "lambda",
+                            "match",
                             "-",
                             "Name",
                             "Newline",
@@ -3387,6 +3446,7 @@ impl<'a> Parser<'a> {
                         | Token::LBrak
                         | Token::LPar
                         | Token::Lambda
+                        | Token::Match
                         | Token::Minus
                         | Token::Name
                         | Token::Newline
@@ -3431,6 +3491,7 @@ impl<'a> Parser<'a> {
                                     "[",
                                     "(",
                                     "lambda",
+                                    "match",
                                     "-",
                                     "Name",
                                     "Newline",
@@ -3481,6 +3542,7 @@ impl<'a> Parser<'a> {
                     | Token::LBrak
                     | Token::LPar
                     | Token::Lambda
+                    | Token::Match
                     | Token::Minus
                     | Token::Name
                     | Token::Newline
@@ -3524,6 +3586,7 @@ impl<'a> Parser<'a> {
                                     "[",
                                     "(",
                                     "lambda",
+                                    "match",
                                     "-",
                                     "Name",
                                     "Newline",
@@ -3572,6 +3635,7 @@ impl<'a> Parser<'a> {
                     | Token::LBrak
                     | Token::LPar
                     | Token::Lambda
+                    | Token::Match
                     | Token::Minus
                     | Token::Name
                     | Token::Newline
@@ -3614,6 +3678,7 @@ impl<'a> Parser<'a> {
                                     "[",
                                     "(",
                                     "lambda",
+                                    "match",
                                     "-",
                                     "Name",
                                     "Newline",
@@ -3682,6 +3747,7 @@ impl<'a> Parser<'a> {
                 | Token::LBrak
                 | Token::LPar
                 | Token::Lambda
+                | Token::Match
                 | Token::Minus
                 | Token::Name
                 | Token::Newline
@@ -3863,6 +3929,7 @@ impl<'a> Parser<'a> {
                         | Token::LBrak
                         | Token::LPar
                         | Token::Lambda
+                        | Token::Match
                         | Token::Minus
                         | Token::Name
                         | Token::Not
@@ -3880,6 +3947,7 @@ impl<'a> Parser<'a> {
                             self.rule_stmt(diags);
                         }
                         Token::Dedent
+                        | Token::Case
                         | Token::EOF
                         | Token::Elif
                         | Token::Else
@@ -3911,6 +3979,7 @@ impl<'a> Parser<'a> {
                                     "[",
                                     "(",
                                     "lambda",
+                                    "match",
                                     "-",
                                     "Name",
                                     "not",
@@ -3967,6 +4036,317 @@ impl<'a> Parser<'a> {
         self.create_node_suite(NodeRef(closed.0), diags);
 
     }
+    fn rule_match_stmt(&mut self, diags: &mut Vec<Diagnostic>) {
+        let m = self.cst.open();
+        expect!(Match, "match", self, diags);
+        self.rule_subject_expr(diags);
+        expect!(Colon, ":", self, diags);
+        expect!(Newline, "Newline", self, diags);
+        expect!(Indent, "Indent", self, diags);
+        self.rule_case_block(diags);
+        loop {
+            match self.current {
+                Token::Case => {
+                    self.rule_case_block(diags);
+                }
+                Token::Dedent
+                | Token::Assert
+                | Token::Async
+                | Token::At
+                | Token::Await
+                | Token::BTick
+                | Token::Break
+                | Token::Class
+                | Token::Continue
+                | Token::Del
+                | Token::EOF
+                | Token::Exec
+                | Token::FString
+                | Token::Float
+                | Token::For
+                | Token::From
+                | Token::Global
+                | Token::If
+                | Token::Imaginary
+                | Token::Import
+                | Token::Int
+                | Token::LBrace
+                | Token::LBrak
+                | Token::LPar
+                | Token::Lambda
+                | Token::Match
+                | Token::Minus
+                | Token::Name
+                | Token::Newline
+                | Token::Not
+                | Token::Pass
+                | Token::Plus
+                | Token::Print
+                | Token::Raise
+                | Token::Return
+                | Token::String
+                | Token::Tilde
+                | Token::Try
+                | Token::While
+                | Token::With
+                | Token::Yield => break,
+                _ => {
+                    self.advance_with_error(diags, err![self, "case",
+                            "Dedent"]);
+                }
+            }
+        }
+        expect!(Dedent, "Dedent", self, diags);
+        let closed = self.cst.close(m, Rule::MatchStmt);
+        self.create_node_match_stmt(NodeRef(closed.0), diags);
+
+    }
+    fn rule_subject_expr(&mut self, diags: &mut Vec<Diagnostic>) {
+        let m = self.cst.open();
+        expect!(Name, "Name", self, diags);
+        let closed = self.cst.close(m, Rule::SubjectExpr);
+        self.create_node_subject_expr(NodeRef(closed.0), diags);
+
+    }
+    fn rule_case_block(&mut self, diags: &mut Vec<Diagnostic>) {
+        let m = self.cst.open();
+        expect!(Case, "case", self, diags);
+        self.rule_patterns(diags);
+        match self.current {
+            Token::If => {
+                self.rule_guard(diags);
+            }
+            Token::Colon => {}
+            _ => {
+                self.error(diags, err![self, ":",
+                            "if"]);
+            }
+        }
+        expect!(Colon, ":", self, diags);
+        self.rule_suite(diags);
+        let closed = self.cst.close(m, Rule::CaseBlock);
+        self.create_node_case_block(NodeRef(closed.0), diags);
+
+    }
+    fn rule_guard(&mut self, diags: &mut Vec<Diagnostic>) {
+        let m = self.cst.open();
+        expect!(If, "if", self, diags);
+        self.rule_test(diags);
+        let closed = self.cst.close(m, Rule::Guard);
+        self.create_node_guard(NodeRef(closed.0), diags);
+
+    }
+    fn rule_patterns(&mut self, diags: &mut Vec<Diagnostic>) {
+        let m = self.cst.open();
+        self.rule_pattern(diags);
+        let closed = self.cst.close(m, Rule::Patterns);
+        self.create_node_patterns(NodeRef(closed.0), diags);
+
+    }
+    fn rule_pattern(&mut self, diags: &mut Vec<Diagnostic>) {
+        let m = self.cst.open();
+        self.rule_or_pattern(diags);
+        match self.current {
+            Token::As => {
+                expect!(As, "as", self, diags);
+                expect!(Name, "Name", self, diags);
+            }
+            Token::Colon
+            | Token::If
+            | Token::RBrak
+            | Token::RPar => {}
+            _ => {
+                self.error(diags, err![self, "as",
+                            ":",
+                            "if",
+                            "]",
+                            ")"]);
+            }
+        }
+        let closed = self.cst.close(m, Rule::Pattern);
+        self.create_node_pattern(NodeRef(closed.0), diags);
+
+    }
+    fn rule_or_pattern(&mut self, diags: &mut Vec<Diagnostic>) {
+        let m = self.cst.open();
+        expect!(Pipe, "|", self, diags);
+        self.rule_closed_pattern(diags);
+        loop {
+            match self.current {
+                Token::Float
+                | Token::Imaginary
+                | Token::Int
+                | Token::LBrace
+                | Token::LBrak
+                | Token::LPar
+                | Token::Name
+                | Token::String => {
+                    self.rule_closed_pattern(diags);
+                }
+                Token::As
+                | Token::Colon
+                | Token::If
+                | Token::RBrak
+                | Token::RPar
+                | Token::Assert
+                | Token::Async
+                | Token::At
+                | Token::Await
+                | Token::BTick
+                | Token::Break
+                | Token::Case
+                | Token::Class
+                | Token::Continue
+                | Token::Dedent
+                | Token::Del
+                | Token::EOF
+                | Token::Exec
+                | Token::FString
+                | Token::For
+                | Token::From
+                | Token::Global
+                | Token::Import
+                | Token::Lambda
+                | Token::Match
+                | Token::Minus
+                | Token::Newline
+                | Token::Not
+                | Token::Pass
+                | Token::Plus
+                | Token::Print
+                | Token::Raise
+                | Token::Return
+                | Token::Tilde
+                | Token::Try
+                | Token::While
+                | Token::With
+                | Token::Yield => break,
+                _ => {
+                    self.advance_with_error(diags, err![self, "as",
+                            ":",
+                            "Float",
+                            "if",
+                            "Imaginary",
+                            "Int",
+                            "{",
+                            "[",
+                            "(",
+                            "Name",
+                            "]",
+                            ")",
+                            "String"]);
+                }
+            }
+        }
+        let closed = self.cst.close(m, Rule::OrPattern);
+        self.create_node_or_pattern(NodeRef(closed.0), diags);
+
+    }
+    fn rule_closed_pattern(&mut self, diags: &mut Vec<Diagnostic>) {
+        let m = self.cst.open();
+        match self.current {
+            Token::String => {
+                expect!(String, "String", self, diags);
+            }
+            Token::Int => {
+                expect!(Int, "Int", self, diags);
+            }
+            Token::Float => {
+                expect!(Float, "Float", self, diags);
+            }
+            Token::Imaginary => {
+                expect!(Imaginary, "Imaginary", self, diags);
+            }
+            Token::Name => {
+                expect!(Name, "Name", self, diags);
+            }
+            Token::LPar => {
+                expect!(LPar, "(", self, diags);
+                match self.current {
+                    Token::Pipe => {
+                        self.rule_patterns(diags);
+                    }
+                    Token::RPar => {}
+                    _ => {
+                        self.error(diags, err![self, "|",
+                                    ")"]);
+                    }
+                }
+                expect!(RPar, ")", self, diags);
+            }
+            Token::LBrak => {
+                expect!(LBrak, "[", self, diags);
+                match self.current {
+                    Token::Pipe => {
+                        self.rule_patterns(diags);
+                    }
+                    Token::RBrak => {}
+                    _ => {
+                        self.error(diags, err![self, "|",
+                                    "]"]);
+                    }
+                }
+                expect!(RBrak, "]", self, diags);
+            }
+            Token::LBrace => {
+                expect!(LBrace, "{", self, diags);
+                match self.current {
+                    Token::Await
+                    | Token::BTick
+                    | Token::FString
+                    | Token::Float
+                    | Token::Imaginary
+                    | Token::Int
+                    | Token::LBrace
+                    | Token::LBrak
+                    | Token::LPar
+                    | Token::Lambda
+                    | Token::Minus
+                    | Token::Name
+                    | Token::Not
+                    | Token::Plus
+                    | Token::String
+                    | Token::Tilde => {
+                        self.rule_dictorsetmaker(diags);
+                    }
+                    Token::RBrace => {}
+                    _ => {
+                        self.error(diags, err![self, "await",
+                                    "`",
+                                    "FString",
+                                    "Float",
+                                    "Imaginary",
+                                    "Int",
+                                    "{",
+                                    "[",
+                                    "(",
+                                    "lambda",
+                                    "-",
+                                    "Name",
+                                    "not",
+                                    "+",
+                                    "}",
+                                    "String",
+                                    "~"]);
+                    }
+                }
+                expect!(RBrace, "}", self, diags);
+            }
+            _ => {
+                self.error(diags, err![self, "Float",
+                            "Imaginary",
+                            "Int",
+                            "{",
+                            "[",
+                            "(",
+                            "Name",
+                            "String"]);
+            }
+        }
+        let closed = self.cst.close(m, Rule::ClosedPattern);
+        self.create_node_closed_pattern(NodeRef(closed.0), diags);
+
+    }
     fn rule_testlist_safe(&mut self, diags: &mut Vec<Diagnostic>) {
         let m = self.cst.open();
         self.rule_old_test(diags);
@@ -4011,6 +4391,7 @@ impl<'a> Parser<'a> {
                         | Token::Exec
                         | Token::FString
                         | Token::Float
+                        | Token::FormatSpecifier
                         | Token::From
                         | Token::Global
                         | Token::Gt
@@ -4031,6 +4412,7 @@ impl<'a> Parser<'a> {
                         | Token::Lt2Eq
                         | Token::LtEq
                         | Token::LtGt
+                        | Token::Match
                         | Token::Minus
                         | Token::MinusEq
                         | Token::Name
@@ -4388,6 +4770,7 @@ impl<'a> Parser<'a> {
                                     | Token::LBrak
                                     | Token::LPar
                                     | Token::Lambda
+                                    | Token::Match
                                     | Token::Minus
                                     | Token::Name
                                     | Token::Pass
@@ -4948,16 +5331,16 @@ impl<'a> Parser<'a> {
                                     | Token::Tilde => {
                                         parser.rule_expr(diags);
                                     }
-                                    Token::Colon
-                                    | Token::ConversionSpecifier
+                                    Token::ConversionSpecifier
+                                    | Token::FormatSpecifier
                                     | Token::RBrace => {}
                                     _ => {
                                         parser.error(diags, err![parser, "await",
                                                     "`",
-                                                    ":",
                                                     "ConversionSpecifier",
                                                     "FString",
                                                     "Float",
+                                                    "FormatSpecifier",
                                                     "Imaginary",
                                                     "Int",
                                                     "{",
@@ -4972,25 +5355,25 @@ impl<'a> Parser<'a> {
                                     }
                                 }
                                 match parser.current {
-                                    Token::Colon
-                                    | Token::ConversionSpecifier => {
+                                    Token::ConversionSpecifier
+                                    | Token::FormatSpecifier => {
                                         match parser.current {
-                                            Token::Colon => {
+                                            Token::FormatSpecifier => {
                                                 parser.rule_fmt_specifier(diags);
                                             }
                                             Token::ConversionSpecifier => {
                                                 expect!(ConversionSpecifier, "ConversionSpecifier", parser, diags);
                                             }
                                             _ => {
-                                                parser.error(diags, err![parser, ":",
-                                                            "ConversionSpecifier"]);
+                                                parser.error(diags, err![parser, "ConversionSpecifier",
+                                                            "FormatSpecifier"]);
                                             }
                                         }
                                     }
                                     Token::RBrace => {}
                                     _ => {
-                                        parser.error(diags, err![parser, ":",
-                                                    "ConversionSpecifier",
+                                        parser.error(diags, err![parser, "ConversionSpecifier",
+                                                    "FormatSpecifier",
                                                     "}"]);
                                     }
                                 }
@@ -5012,6 +5395,7 @@ impl<'a> Parser<'a> {
                             | Token::Eq2
                             | Token::ExclEq
                             | Token::For
+                            | Token::FormatSpecifier
                             | Token::Gt
                             | Token::Gt2
                             | Token::Gt2Eq
@@ -5068,6 +5452,7 @@ impl<'a> Parser<'a> {
                             | Token::Import
                             | Token::Int
                             | Token::Lambda
+                            | Token::Match
                             | Token::Name
                             | Token::Pass
                             | Token::Print
@@ -5096,6 +5481,7 @@ impl<'a> Parser<'a> {
                                         "==",
                                         "!=",
                                         "for",
+                                        "FormatSpecifier",
                                         ">",
                                         ">>",
                                         ">>=",
@@ -5166,6 +5552,7 @@ impl<'a> Parser<'a> {
                             | Token::Eq2
                             | Token::ExclEq
                             | Token::For
+                            | Token::FormatSpecifier
                             | Token::Gt
                             | Token::Gt2
                             | Token::Gt2Eq
@@ -5223,6 +5610,7 @@ impl<'a> Parser<'a> {
                             | Token::Int
                             | Token::LBrace
                             | Token::Lambda
+                            | Token::Match
                             | Token::Name
                             | Token::Pass
                             | Token::Print
@@ -5250,6 +5638,7 @@ impl<'a> Parser<'a> {
                                         "==",
                                         "!=",
                                         "for",
+                                        "FormatSpecifier",
                                         ">",
                                         ">>",
                                         ">>=",
@@ -5564,11 +5953,7 @@ impl<'a> Parser<'a> {
         rec(self, diags, 0, lhs);
     }
     fn rule_fmt_specifier(&mut self, diags: &mut Vec<Diagnostic>) {
-        let m = self.cst.open();
-        expect!(Colon, ":", self, diags);
-        let closed = self.cst.close(m, Rule::FmtSpecifier);
-        self.create_node_fmt_specifier(NodeRef(closed.0), diags);
-
+        expect!(FormatSpecifier, "FormatSpecifier", self, diags);
     }
     fn rule_listmaker(&mut self, diags: &mut Vec<Diagnostic>) {
         let m = self.cst.open();
@@ -5615,6 +6000,7 @@ impl<'a> Parser<'a> {
                         | Token::FString
                         | Token::Float
                         | Token::For
+                        | Token::FormatSpecifier
                         | Token::From
                         | Token::Global
                         | Token::Gt
@@ -5636,6 +6022,7 @@ impl<'a> Parser<'a> {
                         | Token::Lt2Eq
                         | Token::LtEq
                         | Token::LtGt
+                        | Token::Match
                         | Token::Minus
                         | Token::MinusEq
                         | Token::Name
@@ -5741,6 +6128,7 @@ impl<'a> Parser<'a> {
                         | Token::FString
                         | Token::Float
                         | Token::For
+                        | Token::FormatSpecifier
                         | Token::From
                         | Token::Global
                         | Token::Gt
@@ -5762,6 +6150,7 @@ impl<'a> Parser<'a> {
                         | Token::Lt2Eq
                         | Token::LtEq
                         | Token::LtGt
+                        | Token::Match
                         | Token::Minus
                         | Token::MinusEq
                         | Token::Name
@@ -5886,6 +6275,7 @@ impl<'a> Parser<'a> {
                 | Token::FString
                 | Token::Float
                 | Token::For
+                | Token::FormatSpecifier
                 | Token::From
                 | Token::Global
                 | Token::Gt
@@ -5907,6 +6297,7 @@ impl<'a> Parser<'a> {
                 | Token::Lt2Eq
                 | Token::LtEq
                 | Token::LtGt
+                | Token::Match
                 | Token::Minus
                 | Token::MinusEq
                 | Token::Name
@@ -6225,6 +6616,7 @@ impl<'a> Parser<'a> {
                 | Token::LBrak
                 | Token::LPar
                 | Token::Lambda
+                | Token::Match
                 | Token::Minus
                 | Token::Name
                 | Token::Not
@@ -6317,6 +6709,7 @@ impl<'a> Parser<'a> {
                 | Token::LBrak
                 | Token::LPar
                 | Token::Lambda
+                | Token::Match
                 | Token::Minus
                 | Token::Name
                 | Token::Not
@@ -6422,82 +6815,41 @@ impl<'a> Parser<'a> {
                                 }
                                 Token::Comma
                                 | Token::RBrace
-                                | Token::And
-                                | Token::AndEq
-                                | Token::AndKw
-                                | Token::As
                                 | Token::Assert
                                 | Token::Async
                                 | Token::At
                                 | Token::Await
                                 | Token::BTick
                                 | Token::Break
-                                | Token::Caret
-                                | Token::CaretEq
                                 | Token::Class
-                                | Token::Colon
                                 | Token::Continue
-                                | Token::ConversionSpecifier
                                 | Token::Dedent
                                 | Token::Del
-                                | Token::Dot
                                 | Token::EOF
-                                | Token::Else
-                                | Token::Eq
-                                | Token::Eq2
-                                | Token::ExclEq
                                 | Token::Exec
                                 | Token::FString
                                 | Token::Float
                                 | Token::For
                                 | Token::From
                                 | Token::Global
-                                | Token::Gt
-                                | Token::Gt2
-                                | Token::Gt2Eq
-                                | Token::GtEq
                                 | Token::If
                                 | Token::Imaginary
                                 | Token::Import
-                                | Token::In
                                 | Token::Int
-                                | Token::Is
                                 | Token::LBrace
                                 | Token::LBrak
                                 | Token::LPar
                                 | Token::Lambda
-                                | Token::Lt
-                                | Token::Lt2
-                                | Token::Lt2Eq
-                                | Token::LtEq
-                                | Token::LtGt
+                                | Token::Match
                                 | Token::Minus
-                                | Token::MinusEq
                                 | Token::Name
                                 | Token::Newline
                                 | Token::Not
-                                | Token::Or
                                 | Token::Pass
-                                | Token::Percent
-                                | Token::PercentEq
-                                | Token::Pipe
-                                | Token::PipeEq
                                 | Token::Plus
-                                | Token::PlusEq
                                 | Token::Print
-                                | Token::RBrak
-                                | Token::RPar
                                 | Token::Raise
                                 | Token::Return
-                                | Token::Semi
-                                | Token::Slash
-                                | Token::Slash2
-                                | Token::Slash2Eq
-                                | Token::SlashEq
-                                | Token::Star
-                                | Token::Star2
-                                | Token::Star2Eq
-                                | Token::StarEq
                                 | Token::String
                                 | Token::Tilde
                                 | Token::Try
@@ -6545,82 +6897,41 @@ impl<'a> Parser<'a> {
                                 }
                                 Token::Comma
                                 | Token::RBrace
-                                | Token::And
-                                | Token::AndEq
-                                | Token::AndKw
-                                | Token::As
                                 | Token::Assert
                                 | Token::Async
                                 | Token::At
                                 | Token::Await
                                 | Token::BTick
                                 | Token::Break
-                                | Token::Caret
-                                | Token::CaretEq
                                 | Token::Class
-                                | Token::Colon
                                 | Token::Continue
-                                | Token::ConversionSpecifier
                                 | Token::Dedent
                                 | Token::Del
-                                | Token::Dot
                                 | Token::EOF
-                                | Token::Else
-                                | Token::Eq
-                                | Token::Eq2
-                                | Token::ExclEq
                                 | Token::Exec
                                 | Token::FString
                                 | Token::Float
                                 | Token::For
                                 | Token::From
                                 | Token::Global
-                                | Token::Gt
-                                | Token::Gt2
-                                | Token::Gt2Eq
-                                | Token::GtEq
                                 | Token::If
                                 | Token::Imaginary
                                 | Token::Import
-                                | Token::In
                                 | Token::Int
-                                | Token::Is
                                 | Token::LBrace
                                 | Token::LBrak
                                 | Token::LPar
                                 | Token::Lambda
-                                | Token::Lt
-                                | Token::Lt2
-                                | Token::Lt2Eq
-                                | Token::LtEq
-                                | Token::LtGt
+                                | Token::Match
                                 | Token::Minus
-                                | Token::MinusEq
                                 | Token::Name
                                 | Token::Newline
                                 | Token::Not
-                                | Token::Or
                                 | Token::Pass
-                                | Token::Percent
-                                | Token::PercentEq
-                                | Token::Pipe
-                                | Token::PipeEq
                                 | Token::Plus
-                                | Token::PlusEq
                                 | Token::Print
-                                | Token::RBrak
-                                | Token::RPar
                                 | Token::Raise
                                 | Token::Return
-                                | Token::Semi
-                                | Token::Slash
-                                | Token::Slash2
-                                | Token::Slash2Eq
-                                | Token::SlashEq
-                                | Token::Star
-                                | Token::Star2
-                                | Token::Star2Eq
-                                | Token::StarEq
                                 | Token::String
                                 | Token::Tilde
                                 | Token::Try
@@ -6776,6 +7087,7 @@ impl<'a> Parser<'a> {
                         | Token::LBrak
                         | Token::LPar
                         | Token::Lambda
+                        | Token::Match
                         | Token::Minus
                         | Token::Name
                         | Token::Newline
@@ -6840,6 +7152,7 @@ impl<'a> Parser<'a> {
                                                 | Token::LBrak
                                                 | Token::LPar
                                                 | Token::Lambda
+                                                | Token::Match
                                                 | Token::Minus
                                                 | Token::Name
                                                 | Token::Newline
@@ -6935,6 +7248,7 @@ impl<'a> Parser<'a> {
                         | Token::LBrak
                         | Token::LPar
                         | Token::Lambda
+                        | Token::Match
                         | Token::Minus
                         | Token::Name
                         | Token::Newline
@@ -7196,6 +7510,7 @@ impl<'a> Parser<'a> {
                 | Token::FString
                 | Token::Float
                 | Token::For
+                | Token::FormatSpecifier
                 | Token::From
                 | Token::Global
                 | Token::Gt
@@ -7217,6 +7532,7 @@ impl<'a> Parser<'a> {
                 | Token::Lt2Eq
                 | Token::LtEq
                 | Token::LtGt
+                | Token::Match
                 | Token::Minus
                 | Token::MinusEq
                 | Token::Name
@@ -7347,8 +7663,12 @@ trait ParserCallbacks {
     fn create_node_break_stmt(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `call_expr` node is created.
     fn create_node_call_expr(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
+    /// Called when `case_block` node is created.
+    fn create_node_case_block(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `classdef` node is created.
     fn create_node_classdef(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
+    /// Called when `closed_pattern` node is created.
+    fn create_node_closed_pattern(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `comp_for` node is created.
     fn create_node_comp_for(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `comp_if` node is created.
@@ -7415,6 +7735,8 @@ trait ParserCallbacks {
     fn create_node_funcdef(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `global_stmt` node is created.
     fn create_node_global_stmt(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
+    /// Called when `guard` node is created.
+    fn create_node_guard(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `if_expr` node is created.
     fn create_node_if_expr(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `if_stmt` node is created.
@@ -7453,12 +7775,18 @@ trait ParserCallbacks {
     fn create_node_old_lambdef(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `old_test` node is created.
     fn create_node_old_test(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
+    /// Called when `or_pattern` node is created.
+    fn create_node_or_pattern(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `or_test` node is created.
     fn create_node_or_test(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `parameters` node is created.
     fn create_node_parameters(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `pass_stmt` node is created.
     fn create_node_pass_stmt(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
+    /// Called when `pattern` node is created.
+    fn create_node_pattern(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
+    /// Called when `patterns` node is created.
+    fn create_node_patterns(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `print_stmt` node is created.
     fn create_node_print_stmt(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `raise_stmt` node is created.
@@ -7477,6 +7805,8 @@ trait ParserCallbacks {
     fn create_node_stmt(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `string_expr` node is created.
     fn create_node_string_expr(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
+    /// Called when `subject_expr` node is created.
+    fn create_node_subject_expr(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `subscript` node is created.
     fn create_node_subscript(&mut self, _node_ref: NodeRef, _diags: &mut Vec<Diagnostic>) {}
     /// Called when `subscript_expr` node is created.
