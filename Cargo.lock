@@ -616,6 +616,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "lelwel-python3"
+version = "0.0.0"
+dependencies = [
+ "codespan-reporting 0.12.0",
+ "herring",
+ "lelwel",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "lelwel-toml"
 version = "0.0.0"
 dependencies = [
